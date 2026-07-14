@@ -1,12 +1,491 @@
-.marketplace-page .market-header h2 { font-size: 2rem; }
-.product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
-.product-card { background: #fff; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; }
-.product-image { height: 140px; background: linear-gradient(90deg,#f6d0e6,#dff7ef); display:flex;align-items:center;justify-content:center;font-weight:bold;color:#999 }
-.product-body { padding: 1rem; display:flex;flex-direction:column; gap:0.5rem; flex:1 }
-.product-desc { color:#444; margin-top:0.25rem }
-.product-footer { margin-top:auto }
-.product-price { color:#111 }
-
-/* Inputs: fondo blanco y texto negro */
-.marketplace-page .form-control { background: #fff; color: #000; }
-.marketplace-page .form-control::placeholder { color: rgba(0,0,0,0.6); }
+.mkt-page-wrapper {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  box-sizing: border-box;
+}
+.mkt-main-header {
+  text-align: center;
+  margin-bottom: 35px;
+}
+.mkt-vinculo {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #db2777;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  display: block;
+}
+.mkt-main-header h1 {
+  font-size: 2.2rem;
+  color: #be185d;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.mkt-main-header p {
+  color: #9d174d;
+  font-size: 0.95rem;
+  max-width: 600px;
+  margin: 0 auto;
+  font-weight: 500;
+}
+.mkt-container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 30px;
+  align-items: start;
+}
+.mkt-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+.mkt-form-card, .mkt-history-card {
+  background: #fff5f8;
+  padding: 25px;
+  border-radius: 20px;
+  border: 1px solid #ffe3ec;
+  box-shadow: 0 4px 15px rgba(242, 92, 156, 0.05);
+}
+.mkt-history-card {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+}
+.mkt-form-card h4, .mkt-history-card h4 {
+  color: #7d1242;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.mkt-form-card p, .mkt-history-card p {
+  color: #b52263;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.mkt-form-card label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #b52263;
+  margin-bottom: 4px;
+}
+.mkt-form-card input, .mkt-form-card select, .mkt-form-card textarea {
+  width: 100%;
+  margin-bottom: 15px;
+  padding: 10px 12px;
+  border: 1px solid #ffd0e0;
+  border-radius: 10px;
+  background-color: #ffffff;
+  font-size: 0.85rem;
+  outline: none;
+  box-sizing: border-box;
+}
+.mkt-file-upload {
+  border: 2px dashed #ffd0e0;
+  padding: 15px;
+  text-align: center;
+  margin-bottom: 15px;
+  border-radius: 10px;
+  background: #ffffff;
+}
+.mkt-file-upload input { display: none; }
+.file-label { cursor: pointer; color: #b52263; font-weight: 600; font-size: 0.85rem; }
+.mkt-submit {
+  width: 100%;
+  padding: 12px;
+  color: white;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+}
+.mkt-clear-history-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 10px;
+  text-decoration: underline;
+  display: block;
+}
+.mkt-clear-history-btn:hover {
+  color: #b91c1c;
+}
+.mkt-history-list {
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 0.85rem;
+}
+.mkt-history-item {
+  padding: 8px 0;
+  border-bottom: 1px dashed #fbcfe8;
+  color: #4d0426;
+}
+.mkt-controls-bar {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 16px;
+  border: 1px solid #fbcfe8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 25px;
+}
+.mkt-search-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 15px;
+  border: 1px solid #fbcfe8;
+  border-radius: 20px;
+  outline: none;
+  font-size: 0.85rem;
+}
+.mkt-select-filter {
+  padding: 10px 15px;
+  border: 1px solid #fbcfe8;
+  border-radius: 20px;
+  outline: none;
+  font-size: 0.85rem;
+  background-color: white;
+  cursor: pointer;
+}
+.mkt-cart-toggle {
+  background: #ffffff;
+  border: 1px solid #ffd0e0;
+  color: #b52263;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mkt-cart-dropdown {
+  background: #ffffff;
+  border: 1px solid #ffd0e0;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+.mkt-cart-title {
+  font-size: 1.1rem;
+  color: #7d1242;
+  font-weight: 700;
+  margin-bottom: 15px;
+}
+.mkt-cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px dashed #ffd0e0;
+}
+.mkt-cart-item-info h5 {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+.mkt-cart-item-info p {
+  font-size: 0.8rem;
+  color: #be185d;
+  margin-top: 2px;
+}
+.mkt-cart-remove {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.mkt-cart-footer {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.mkt-cart-total {
+  font-weight: 700;
+  color: #7d1242;
+}
+.mkt-cart-checkout {
+  padding: 8px 20px;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.mkt-cart-empty {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.mkt-cart-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.mkt-cart-quantity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ffd0e0;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+.mkt-cart-qty-btn {
+  border: none;
+  background: transparent;
+  color: #be185d;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.mkt-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 25px;
+}
+.mkt-product-card {
+  background: #ffffff;
+  border: 1px solid #fbcfe8;
+  border-radius: 0px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.mkt-img-block {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+.mkt-img-block img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mkt-delete-post {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  z-index: 10;
+}
+.mkt-product-body {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.mkt-product-title {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #1e293b;
+}
+.mkt-product-vendor {
+  font-size: 0.75rem;
+  color: #be185d;
+  font-weight: 600;
+  margin-bottom: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.mkt-product-vendor:hover {
+  color: #7d1242;
+}
+.mkt-product-desc-short {
+  font-size: 0.75rem;
+  color: #475569;
+  line-height: 1.3;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mkt-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: auto;
+}
+.mkt-product-price {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #db2777;
+}
+.mkt-stock-indicator {
+  font-size: 0.7rem;
+  color: #64748b;
+  display: block;
+}
+.mkt-stock-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+.mkt-stock-mini-input {
+  width: 50px !important;
+  padding: 3px 5px !important;
+  font-size: 0.75rem !important;
+  border: 1px solid #ffd0e0 !important;
+  border-radius: 4px !important;
+  margin-bottom: 0 !important;
+  text-align: center;
+}
+.mkt-stock-save-btn {
+  background: #be185d;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.mkt-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+.mkt-modal-card {
+  background: #ffffff;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 1px solid #ffe3ec;
+}
+.mkt-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #f1f5f9;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.mkt-modal-avatar {
+  width: 65px;
+  height: 65px;
+  background: #fbcfe8;
+  color: #be185d;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0 auto 15px auto;
+}
+.mkt-modal-card h3 {
+  color: #7d1242;
+  font-size: 1.3rem;
+  margin-bottom: 4px;
+}
+.mkt-modal-badge {
+  background: #fff5f8;
+  color: #db2777;
+  padding: 4px 14px;
+  border-radius: 15px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-bottom: 15px;
+  border: 1px solid #ffe3ec;
+}
+.mkt-modal-desc {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  text-align: left;
+  background: #fdf2f8;
+  padding: 12px;
+  border-radius: 10px;
+}
+.mkt-modal-whatsapp-btn {
+  background: #25d366;
+  color: white;
+  border: none;
+  width: 100%;
+  padding: 12px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: block;
+}
+.mkt-summary-list {
+  text-align: left;
+  list-style: none;
+  margin-bottom: 20px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.mkt-summary-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+}
+.mkt-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #be185d;
+  color: white;
+  padding: 12px 25px;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  z-index: 1000;
+}
+@media (max-width: 900px) {
+  .mkt-container { grid-template-columns: 1fr; }
+  .mkt-sidebar { width: 100%; }
+}

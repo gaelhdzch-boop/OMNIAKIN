@@ -8,17 +8,30 @@ plataforma/
 │   ├── src/
 │   ├── package.json
 │   └── ...
-└── backend/                (Backend - Node.js + Express) 🆕
-    ├── config/
-    ├── controllers/
-    ├── routes/
-    ├── models/
-    ├── middleware/
-    ├── database/
-    ├── package.json
-    ├── server.js
-    └── ...
+├── backend/                (Backend - Node.js + Express) 🆕
+│   ├── config/
+│   ├── controllers/
+│   ├── routes/
+│   ├── models/
+│   ├── middleware/
+│   ├── database/
+│   ├── package.json
+│   ├── server.js
+│   └── ...
+└── ACTUALIZACIONES.md      (Resumen de cambios recientes)
 ```
+
+## Estado actual del proyecto
+
+La plataforma ya incluye las siguientes secciones funcionales:
+- Autenticación y registro de usuarios.
+- Recuperación de contraseña y gestión de perfil.
+- Marketplace con vistas de productos o servicios.
+- Catálogo de cursos y seguimiento de progreso.
+- Secciones de finanzas, comunidad y oportunidades.
+- Estilos nuevos para mejorar la experiencia visual del frontend.
+
+> Puedes consultar el archivo [ACTUALIZACIONES.md](ACTUALIZACIONES.md) para ver un resumen de los cambios más recientes.
 
 ---
 

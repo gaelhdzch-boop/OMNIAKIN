@@ -7,7 +7,7 @@ import Finanzas from './components/Finanzas';
 import Marketplace from './components/Marketplace';
 import Cursos from './components/Cursos';
 import Comunidad from './components/Comunidad';
-import { OpportunitiesBanner } from './components/OpportunitiesBanner';
+import Oportunidades from './components/Oportunidades';
 import { AuthPage } from './components/AuthPage';
 import { Profile } from './components/Profile';
 import SessionClosed from './components/SessionClosed';
@@ -150,7 +150,7 @@ function App() {
         {currentPage === 'cursos' && <Cursos />}
         {currentPage === 'marketplace' && <Marketplace />}
         {currentPage === 'comunidad' && <Comunidad />}
-        {currentPage === 'oportunidades' && <OpportunitiesBanner />}
+        {currentPage === 'oportunidades' && <Oportunidades isAuthenticated={isAuthenticated} />}
         {currentPage === 'finanzas' && <Finanzas />}
       </main>
     </div>

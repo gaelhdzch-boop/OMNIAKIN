@@ -1,0 +1,55 @@
+.oportunidad-card {
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background-color: #ffffff;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.oportunidad-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+.badge-categoria {
+  background-color: #212529;
+  color: #fff;
+  font-weight: 500;
+}
+
+.badge-abierta {
+  background-color: #e8f5e9 !important;
+  color: #2e7d32 !important;
+  font-weight: 600;
+}
+
+.badge-proxima {
+  background-color: #fff3e0 !important;
+  color: #ef6c00 !important;
+  font-weight: 600;
+}
+
+.badge-cerrada {
+  background-color: #ffebee !important;
+  color: #c62828 !important;
+  font-weight: 600;
+}
+
+.requisitos-list li {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin-bottom: 4px;
+}
+
+.btn-postular {
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+.btn-postular:hover {
+  opacity: 0.9;
+}
+
+.alert-success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}

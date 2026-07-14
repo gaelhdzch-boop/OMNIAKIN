@@ -3,8 +3,15 @@
 ## Resumen del proyecto
 Esta plataforma incluye:
 - Backend en Node.js + Express para autenticación, recuperación de contraseña y administración de usuarios.
-- Frontend en React + Vite para registro, inicio de sesión, perfil, cursos y recuperación de contraseña.
+- Frontend en React + Vite para registro, inicio de sesión, perfil, marketplace, cursos, finanzas, comunidad y oportunidades.
 - Base de datos MySQL con tablas de usuarios, cursos, tokens de recuperación y sesiones.
+
+## Actualizaciones recientes
+- Se consolidó la aplicación en la carpeta frontend con una estructura más organizada.
+- Se añadieron nuevas vistas para marketplace, cursos, finanzas, comunidad y oportunidades.
+- Se mejoró el flujo de autenticación, registro y perfil de usuario.
+- Se incorporaron estilos nuevos para formularios, perfil, marketplace y secciones de finanzas.
+- Se creó un archivo de seguimiento de cambios en [ACTUALIZACIONES.md](ACTUALIZACIONES.md).
 
 ## Estructura principal
 

@@ -45,8 +45,10 @@ export const Profile = ({ onLogout }) => {
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
   const [isFinanzasOpen, setIsFinanzasOpen] = useState(false);
+  const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [inscritosPerfil, setInscritosPerfil] = useState([]);
   const [progresoPerfil, setProgresoPerfil] = useState({});
+  const [postulacionesPerfil, setPostulacionesPerfil] = useState([]);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -111,14 +113,31 @@ export const Profile = ({ onLogout }) => {
     loadCoursesFromStorage();
     loadCoursesFromApi();
 
+    const loadApplicationsFromStorage = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('userApplications') || '[]');
+        setPostulacionesPerfil(Array.isArray(stored) ? stored : []);
+      } catch {
+        setPostulacionesPerfil([]);
+      }
+    };
+
+    loadApplicationsFromStorage();
+
     const handler = (e) => {
       const { cursosInscritos, progresoCursos } = e.detail || {};
       if (Array.isArray(cursosInscritos)) setInscritosPerfil(cursosInscritos);
       if (progresoCursos && typeof progresoCursos === 'object') setProgresoPerfil(progresoCursos);
     };
 
+    const applicationsHandler = () => loadApplicationsFromStorage();
+
     window.addEventListener('mc:coursesUpdated', handler);
-    return () => window.removeEventListener('mc:coursesUpdated', handler);
+    window.addEventListener('opportunities:updated', applicationsHandler);
+    return () => {
+      window.removeEventListener('mc:coursesUpdated', handler);
+      window.removeEventListener('opportunities:updated', applicationsHandler);
+    };
   }, []);
 
   const handleInputChange = (e) => {
@@ -486,6 +505,45 @@ export const Profile = ({ onLogout }) => {
                   <div className="profile-empty-state">
                     <p>Aún no tienes cursos inscritos.</p>
                     <p>Explora el marketplace y activa tus primeros cursos para verlos aquí.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+
+          <section className="profile-card profile-form-card">
+            <div className="profile-form-header">
+              <button
+                type="button"
+                className="collapse-toggle"
+                onClick={() => setIsApplicationsOpen((v) => !v)}
+                aria-expanded={isApplicationsOpen}
+              >
+                <div>
+                  <h2 style={{ display: 'inline' }}>Postulaciones</h2>
+                  <span className="collapse-indicator">{isApplicationsOpen ? '▲' : '▼'}</span>
+                </div>
+                <p className="mb-0">Revisa las oportunidades a las que te postulaste.</p>
+              </button>
+            </div>
+
+            {isApplicationsOpen && (
+              <div className="profile-courses-list">
+                {postulacionesPerfil.length > 0 ? (
+                  <div className="profile-courses-grid">
+                    {postulacionesPerfil.map((postulacion) => (
+                      <article key={postulacion.id} className="profile-course-item">
+                        <h4>{postulacion.titulo}</h4>
+                        <p className="course-category">{postulacion.organizacion}</p>
+                        <p className="text-muted small">Estado: {postulacion.estado}</p>
+                        <p className="text-muted small">Postulado el {postulacion.fecha}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="profile-empty-state">
+                    <p>Aún no tienes postulaciones.</p>
+                    <p>Explora oportunidades y postúlate para verlas aquí.</p>
                   </div>
                 )}
               </div>
