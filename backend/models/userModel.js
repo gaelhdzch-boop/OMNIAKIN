@@ -1,5 +1,16 @@
 import pool from '../config/database.js';
 
+const safeJsonParse = (value, fallback = []) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'object') return value;
+
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    return fallback;
+  }
+};
+
 export const getUserByEmail = async (correo) => {
   try {
     const [rows] = await pool.query('SELECT * FROM usuarios WHERE correo = ? LIMIT 1', [correo]);
@@ -330,8 +341,8 @@ export const getCourses = async () => {
     const [rows] = await pool.query('SELECT * FROM cursos WHERE estado = ? ORDER BY fecha_creacion DESC', ['activo']);
     return rows.map((row) => ({
       ...row,
-      recursos: row.recursos ? JSON.parse(row.recursos) : [],
-      aprendizajes: row.recursos ? JSON.parse(row.recursos) : [],
+      recursos: safeJsonParse(row.recursos, []),
+      aprendizajes: safeJsonParse(row.recursos, []),
       precio: Number(row.precio || 0),
     }));
   } catch (error) {
@@ -347,7 +358,7 @@ export const createCourse = async (titulo, descripcion, categoria, nivel, instru
     );
     const [rows] = await pool.query('SELECT * FROM cursos WHERE id = ? LIMIT 1', [result.insertId]);
     const row = rows[0] || null;
-    return row ? { ...row, recursos: row.recursos ? JSON.parse(row.recursos) : [], precio: Number(row.precio || 0) } : null;
+    return row ? { ...row, recursos: safeJsonParse(row.recursos, []), precio: Number(row.precio || 0) } : null;
   } catch (error) {
     throw new Error(`Error al crear curso: ${error.message}`);
   }
@@ -362,7 +373,7 @@ export const updateCourse = async (cursoId, titulo, descripcion, categoria, nive
     if (!result.affectedRows) return null;
     const [rows] = await pool.query('SELECT * FROM cursos WHERE id = ? LIMIT 1', [cursoId]);
     const row = rows[0] || null;
-    return row ? { ...row, recursos: row.recursos ? JSON.parse(row.recursos) : [], precio: Number(row.precio || 0) } : null;
+    return row ? { ...row, recursos: safeJsonParse(row.recursos, []), precio: Number(row.precio || 0) } : null;
   } catch (error) {
     throw new Error(`Error al actualizar curso: ${error.message}`);
   }
@@ -382,7 +393,7 @@ export const getOpportunities = async () => {
     const [rows] = await pool.query('SELECT * FROM oportunidades WHERE estado_publicacion != ? ORDER BY fecha_publicacion DESC', ['Cerrada']);
     return rows.map((row) => ({
       ...row,
-      requisitos: row.requisitos ? JSON.parse(row.requisitos) : [],
+      requisitos: safeJsonParse(row.requisitos, []),
       estatus: row.estado_publicacion || 'Abierta',
     }));
   } catch (error) {
@@ -398,7 +409,7 @@ export const createOpportunity = async (titulo, organizacion, categoria, estado,
     );
     const [rows] = await pool.query('SELECT * FROM oportunidades WHERE id = ? LIMIT 1', [result.insertId]);
     const row = rows[0] || null;
-    return row ? { ...row, requisitos: row.requisitos ? JSON.parse(row.requisitos) : [] } : null;
+    return row ? { ...row, requisitos: safeJsonParse(row.requisitos, []) } : null;
   } catch (error) {
     throw new Error(`Error al crear oportunidad: ${error.message}`);
   }
@@ -413,7 +424,7 @@ export const updateOpportunity = async (oportunidadId, titulo, organizacion, cat
     if (!result.affectedRows) return null;
     const [rows] = await pool.query('SELECT * FROM oportunidades WHERE id = ? LIMIT 1', [oportunidadId]);
     const row = rows[0] || null;
-    return row ? { ...row, requisitos: row.requisitos ? JSON.parse(row.requisitos) : [] } : null;
+    return row ? { ...row, requisitos: safeJsonParse(row.requisitos, []) } : null;
   } catch (error) {
     throw new Error(`Error al actualizar oportunidad: ${error.message}`);
   }
