@@ -9,6 +9,30 @@ export const AuthPage = ({ initialView = 'login', resetToken = null, onLoginSucc
 
   return (
     <div className="auth-page">
+      <header className="auth-page-navbar">
+        <button className="auth-brand" type="button" onClick={onCancel}>
+          <img src="/logo.ico" alt="OMNIA KIN logo" className="auth-brand-logo" />
+          <span>OMNIA KIN</span>
+        </button>
+        <div className="auth-page-actions">
+          <button
+            type="button"
+            className={`btn btn-link ${currentView === 'login' ? 'active' : ''}`}
+            onClick={() => setCurrentView('login')}
+          >
+            Entrar
+          </button>
+          <button
+            type="button"
+            className={`btn rounded-pill ${currentView === 'signup' ? 'btn-primary' : 'btn-outline-primary'}`}
+            style={currentView === 'signup' ? {} : { color: '#d63384', borderColor: '#d63384' }}
+            onClick={() => setCurrentView('signup')}
+          >
+            Crear cuenta
+          </button>
+        </div>
+      </header>
+
       {currentView === 'signup' ? (
         <SignUp onSwitchToLogin={() => setCurrentView('login')} onCancel={onCancel} />
       ) : currentView === 'forgot' ? (

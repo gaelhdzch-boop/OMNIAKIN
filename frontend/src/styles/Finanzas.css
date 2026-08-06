@@ -40,20 +40,20 @@
 }
 
 .finanzas-header h2 {
-  color: var(--fin-ink);
+  color: #be185d;
   font-size: clamp(2rem, 5vw, 3.2rem);
-  font-weight: 900;
-  letter-spacing: 0;
+  font-weight: 700;
   line-height: 1.05;
   margin: 0;
 }
 
 .finanzas-header p {
-  color: var(--fin-pink-dark);
-  font-size: 1.08rem;
-  font-weight: 700;
+  color: #9d174d;
+  font-size: 0.95rem;
+  font-weight: 500;
   line-height: 1.6;
   margin: 16px auto 0;
+  max-width: 600px;
 }
 
 .finanzas-summary,
@@ -164,10 +164,10 @@
 }
 
 .finanzas-table {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) 110px 110px;
-  grid-auto-rows: auto;
+  width: 100%;
   margin-top: 12px;
 }
 
@@ -186,12 +186,12 @@
   background: transparent;
   border: 0;
   color: var(--fin-muted);
-  display: grid;
+  display: flex;
+  align-items: center;
   font-size: 0.86rem;
   font-weight: 900;
   gap: 12px;
-  grid-column: 1 / -1;
-  grid-template-columns: minmax(0, 1fr) 110px 110px;
+  width: 100%;
   padding-bottom: 0;
 }
 
@@ -304,7 +304,49 @@
   padding: 11px 18px;
 }
 
-.finanzas-message {
+.btn-guardar-metas,
+.btn-guardar-meta,
+.finanzas-goal button {
+  background: #ffffff;
+  border: 2px solid rgba(23,32,51,0.06);
+  border-radius: 10px;
+  color: var(--fin-ink);
+  padding: 8px 10px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(23,32,51,0.05);
+}
+
+.btn-guardar-metas {
+  background: var(--fin-pink);
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 12px 0;
+}
+
+.finanzas-goals {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.finanzas-row {
+  align-items: center;
+  background: #fff7fb;
+  border: 1px solid var(--fin-border);
+  border-radius: 16px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 110px 110px;
+  padding: 12px;
+  width: 100%;
+}
+
+.finanzas-row span,
+.finanzas-row strong {
   color: var(--fin-pink-dark);
   font-weight: 900;
   margin: 12px 0 0;

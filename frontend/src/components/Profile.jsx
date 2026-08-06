@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { authService } from '../services/api';
+import { fileToDataUrl, DEFAULT_MAX_IMAGE_BYTES } from '../utils/imageUtils';
 import '../styles/Profile.css';
-import Finanzas from './Finanzas';
 
 export const Profile = ({ onLogout }) => {
   const [user, setUser] = useState(() => {
@@ -43,7 +43,6 @@ export const Profile = ({ onLogout }) => {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
-  const [isFinanzasOpen, setIsFinanzasOpen] = useState(false);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false);
   const [inscritosPerfil, setInscritosPerfil] = useState([]);
   const [progresoPerfil, setProgresoPerfil] = useState({});
@@ -147,23 +146,17 @@ export const Profile = ({ onLogout }) => {
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > MAX_IMAGE_SIZE) {
-      setError('La imagen debe ser menor de 10 MB.');
-      setMessage('');
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result;
+    try {
+      const base64 = await fileToDataUrl(file, MAX_IMAGE_SIZE);
       setAvatarPreview(base64);
       setFormData((prev) => ({ ...prev, fotoPerfil: base64 }));
       setFotoPerfilChanged(true);
       setError('');
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setError(err.message || 'Error al procesar la imagen');
+      setMessage('');
+      e.target.value = '';
+    }
   };
 
   const triggerFileSelect = () => {
@@ -549,28 +542,7 @@ export const Profile = ({ onLogout }) => {
             )}
           </section>
 
-          <section className="profile-card profile-form-card">
-            <div className="profile-form-header">
-              <button
-                type="button"
-                className="collapse-toggle"
-                onClick={() => setIsFinanzasOpen((v) => !v)}
-                aria-expanded={isFinanzasOpen}
-              >
-                <div>
-                  <h2 style={{ display: 'inline' }}>Finanzas</h2>
-                  <span className="collapse-indicator">{isFinanzasOpen ? '▲' : '▼'}</span>
-                </div>
-                <p className="mb-0">Gestiona tus finanzas para tomar mejores decisiones.</p>
-              </button>
-            </div>
-
-            {isFinanzasOpen && (
-              <div className="profile-finanzas-content">
-                <Finanzas />
-              </div>
-            )}
-          </section>
+          {/* Finanzas removed from profile sidebar to keep only navbar navigation link */}
         </div>
       </main>
       <div className="profile-footer">

@@ -2,7 +2,6 @@
   max-width: 1300px;
   margin: 0 auto;
   padding: 40px 20px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   box-sizing: border-box;
 }
 .mkt-main-header {
@@ -23,6 +22,7 @@
   color: #be185d;
   font-weight: 700;
   margin-bottom: 10px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .mkt-main-header p {
   color: #9d174d;
@@ -89,6 +89,65 @@
   margin-bottom: 15px;
   border-radius: 10px;
   background: #ffffff;
+}
+.mkt-image-thumb img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.mkt-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.mkt-editor-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  width: min(920px, 96%);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.mkt-editor-canvas {
+  width: 600px;
+  height: 600px;
+  background: #f8fafc;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+.mkt-editor-canvas img {
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
+  max-width: none;
+}
+.mkt-editor-controls {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+}
+.mkt-btn {
+  background: #be185d;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.mkt-btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
 }
 .mkt-file-upload input { display: none; }
 .file-label { cursor: pointer; color: #b52263; font-weight: 600; font-size: 0.85rem; }
@@ -300,10 +359,28 @@
   flex-direction: column;
   flex-grow: 1;
 }
+.mkt-product-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
 .mkt-product-title {
   font-size: 0.95rem;
   font-weight: bold;
   color: #1e293b;
+}
+.mkt-product-badge {
+  background: #fff0f6;
+  color: #be185d;
+  border: 1px solid #ffdef0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 .mkt-product-vendor {
   font-size: 0.75rem;
@@ -370,6 +447,33 @@
   font-weight: bold;
   border-radius: 4px;
   cursor: pointer;
+}
+/* Estilo bonito para el botón "Agregar" (mkt-contact-btn) */
+.mkt-contact-btn {
+  background: linear-gradient(180deg, #F472B6 0%, #BE185D 100%);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(190, 24, 93, 0.12);
+  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+.mkt-contact-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(190, 24, 93, 0.16);
+}
+.mkt-contact-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.mkt-contact-btn:disabled {
+  background: #fff5f8;
+  color: #be9aa9;
+  border: 1px solid #ffe3ec;
+  box-shadow: none;
+  cursor: not-allowed;
 }
 .mkt-modal-overlay {
   position: fixed;
@@ -488,4 +592,57 @@
 @media (max-width: 900px) {
   .mkt-container { grid-template-columns: 1fr; }
   .mkt-sidebar { width: 100%; }
+}
+
+/* Secciones separadas para 'Mis artículos' y 'Marketplace' */
+.mkt-section {
+  background: #ffffff;
+  border: 1px solid #fff0f6;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 18px rgba(242, 92, 156, 0.04);
+}
+.mkt-section-header h3 {
+  margin: 0 0 10px 0;
+  color: #7d1242;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+.mkt-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.mkt-toggle-btn {
+  background: transparent;
+  border: 1px solid #ffe3ec;
+  color: #be185d;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.mkt-toggle-btn .mkt-toggle-icon {
+  transition: transform 140ms ease;
+}
+.mkt-toggle-btn.collapsed .mkt-toggle-icon {
+  transform: rotate(0deg);
+}
+.mkt-toggle-btn.open .mkt-toggle-icon {
+  transform: rotate(0deg);
+}
+.mkt-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 18px;
+}
+
+.mkt-mis-articulos {
+  border-color: #ffe6f0;
+  background: linear-gradient(180deg, #fff8fb 0%, #fff5f8 100%);
 }

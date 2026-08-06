@@ -1,6 +1,6 @@
 import { COLORS } from '../constants/colors';
 
-export const Navbar = ({ onCreateAccountClick, onLoginClick, onLogoClick, onProfileClick, isAuthenticated, onNavigate, onLogout }) => {
+export const Navbar = ({ onCreateAccountClick, onLoginClick, onLogoClick, onProfileClick, isAuthenticated, userRole, onNavigate, onLogout }) => {
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-light">
       <div className="container">
@@ -13,7 +13,7 @@ export const Navbar = ({ onCreateAccountClick, onLoginClick, onLogoClick, onProf
           type="button" 
           data-bs-toggle="collapse" 
           data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
+          aria-controls="#navbarNav"
           aria-expanded="false"
           aria-label="Toggle navigation"
         >
@@ -28,6 +28,9 @@ export const Navbar = ({ onCreateAccountClick, onLoginClick, onLogoClick, onProf
               <li className="nav-item"><button className="nav-link btn btn-link" onClick={() => onNavigate?.('comunidad')}>Comunidad</button></li>
               <li className="nav-item"><button className="nav-link btn btn-link" onClick={() => onNavigate?.('finanzas')}>Finanzas</button></li>
               <li className="nav-item"><button className="nav-link btn btn-link" onClick={() => onNavigate?.('oportunidades')}>Oportunidades</button></li>
+              {userRole === 'admin' && (
+                <li className="nav-item"><button className="nav-link btn btn-link" onClick={() => onNavigate?.('admin')}>Admin</button></li>
+              )}
             </ul>
           )}
 

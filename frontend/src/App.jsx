@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
-import { FeaturesGrid } from './components/FeaturesGrid';
 import Finanzas from './components/Finanzas';
 import Marketplace from './components/Marketplace';
 import Cursos from './components/Cursos';
+import CursoDetalle from './components/CursoDetalle';
 import Comunidad from './components/Comunidad';
 import Oportunidades from './components/Oportunidades';
+import AdminDashboard from './components/AdminDashboard';
 import { AuthPage } from './components/AuthPage';
 import { Profile } from './components/Profile';
 import SessionClosed from './components/SessionClosed';
@@ -24,6 +25,14 @@ function App() {
     return 'home';
   });
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [user, setUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user')) || null;
+    } catch {
+      return null;
+    }
+  });
+  const [selectedCourse, setSelectedCourse] = useState(null);
 
   const navigateToAuth = (view = 'signup') => {
     if (isAuthenticated) {
@@ -46,6 +55,7 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsAuthenticated(false);
+    setUser(null);
     setCurrentPage('closed');
   };
 
@@ -54,30 +64,41 @@ function App() {
   const navigateToComunidad = () => setCurrentPage('comunidad');
   const navigateToOportunidades = () => setCurrentPage('oportunidades');
   const navigateToFinanzas = () => setCurrentPage('finanzas');
+  const navigateToAdmin = () => setCurrentPage('admin');
+
+  const handleNavigation = (page) => {
+    if (page === 'cursos') navigateToCursos();
+    else if (page === 'marketplace') navigateToMarketplace();
+    else if (page === 'comunidad') navigateToComunidad();
+    else if (page === 'finanzas') navigateToFinanzas();
+    else if (page === 'oportunidades') navigateToOportunidades();
+    else if (page === 'admin') navigateToAdmin();
+  };
+
+  const navigateToCourseDetail = (course) => {
+    setSelectedCourse(course);
+    setCurrentPage('curso-detail');
+  };
+
+  const navigateBackToCursos = () => {
+    setCurrentPage('cursos');
+  };
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
+    setUser(() => {
+      try {
+        return JSON.parse(localStorage.getItem('user')) || null;
+      } catch {
+        return null;
+      }
+    });
     setCurrentPage('profile');
   };
 
   if (currentPage === 'auth') {
     return (
       <div>
-        <Navbar 
-          onLogoClick={handleLogoClick}
-          onCreateAccountClick={navigateToSignup}
-          onLoginClick={navigateToLogin}
-          onProfileClick={navigateToProfile}
-          isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
-          onLogout={handleLogout}
-        />
         <AuthPage
           key={`${authView}-${resetToken || ''}`}
           initialView={authView}
@@ -102,13 +123,8 @@ function App() {
           onLoginClick={navigateToLogin}
           onProfileClick={navigateToProfile}
           isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
         <Profile onLogout={handleLogout} />
@@ -125,16 +141,29 @@ function App() {
           onLoginClick={navigateToLogin}
           onProfileClick={navigateToProfile}
           isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
-        <Cursos />
+        <Cursos onViewCourseDetail={navigateToCourseDetail} />
+      </div>
+    );
+  }
+
+  if (currentPage === 'curso-detail') {
+    return (
+      <div>
+        <Navbar 
+          onLogoClick={handleLogoClick}
+          onCreateAccountClick={navigateToSignup}
+          onLoginClick={navigateToLogin}
+          onProfileClick={navigateToProfile}
+          isAuthenticated={isAuthenticated}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
+          onLogout={handleLogout}
+        />
+        <CursoDetalle curso={selectedCourse} onBack={navigateBackToCursos} />
       </div>
     );
   }
@@ -148,13 +177,8 @@ function App() {
           onLoginClick={navigateToLogin}
           onProfileClick={navigateToProfile}
           isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
         <Marketplace />
@@ -171,13 +195,8 @@ function App() {
           onLoginClick={navigateToLogin}
           onProfileClick={navigateToProfile}
           isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
         <Comunidad />
@@ -194,13 +213,8 @@ function App() {
           onLoginClick={navigateToLogin}
           onProfileClick={navigateToProfile}
           isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
         <Finanzas />
@@ -217,16 +231,29 @@ function App() {
           onLoginClick={navigateToLogin}
           onProfileClick={navigateToProfile}
           isAuthenticated={isAuthenticated}
-          onNavigate={(page) => {
-            if (page === 'cursos') navigateToCursos();
-            else if (page === 'marketplace') navigateToMarketplace();
-            else if (page === 'comunidad') navigateToComunidad();
-            else if (page === 'finanzas') navigateToFinanzas();
-            else if (page === 'oportunidades') navigateToOportunidades();
-          }}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
           onLogout={handleLogout}
         />
         <Oportunidades isAuthenticated={isAuthenticated} />
+      </div>
+    );
+  }
+
+  if (currentPage === 'admin') {
+    return (
+      <div>
+        <Navbar 
+          onLogoClick={handleLogoClick}
+          onCreateAccountClick={navigateToSignup}
+          onLoginClick={navigateToLogin}
+          onProfileClick={navigateToProfile}
+          isAuthenticated={isAuthenticated}
+          userRole={user?.rol}
+          onNavigate={handleNavigation}
+          onLogout={handleLogout}
+        />
+        <AdminDashboard />
       </div>
     );
   }
@@ -236,8 +263,11 @@ function App() {
       <main>
         {currentPage === 'home' && (
           <>
-            <HeroSection onCreateAccountClick={navigateToSignup} onLoginClick={navigateToLogin} />
-            <FeaturesGrid />
+            <HeroSection
+              onLogoClick={handleLogoClick}
+              onCreateAccountClick={navigateToSignup}
+              onLoginClick={navigateToLogin}
+            />
           </>
         )}
       </main>

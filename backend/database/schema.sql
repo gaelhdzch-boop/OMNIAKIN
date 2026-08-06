@@ -79,3 +79,29 @@ CREATE TABLE IF NOT EXISTS marketplace_productos (
   INDEX idx_categoria (categoria),
   INDEX idx_ciudad (ciudad)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de movimientos financieros por usuario
+CREATE TABLE IF NOT EXISTS finanzas_movimientos (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  usuario_id INT NOT NULL,
+  concepto VARCHAR(255) NOT NULL,
+  categoria ENUM('Ingresos', 'Gastos') NOT NULL,
+  monto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  fecha VARCHAR(50) NOT NULL DEFAULT 'Hoy',
+  fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  INDEX idx_finanzas_usuario (usuario_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla de metas financieras por usuario
+CREATE TABLE IF NOT EXISTS finanzas_metas (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  usuario_id INT NOT NULL,
+  nombre VARCHAR(100) NOT NULL,
+  actual DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  objetivo DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  color VARCHAR(50) DEFAULT 'rosa',
+  fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_usuario_meta (usuario_id, nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { COLORS } from '../constants/colors';
+import { marketplaceService, authService } from '../services/api.js';
+import { fileToDataUrl } from '../utils/imageUtils';
 import '../styles/Marketplace.css';
 
 const perfilesVendedoras = {
@@ -17,7 +19,14 @@ const productosIniciales = [
 const coloresPastel = ['#f1c40f', '#e67e22', '#f1948a', '#bb8fce', '#85c1e9', '#73c6b6'];
 
 export default function Marketplace() {
-  const USUARIO_LOGUEADO = 'Juan Pérez';
+    const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user')) || null;
+    } catch {
+      return null;
+    }
+  })();
+  const usuarioPerfilNombre = currentUser?.nombre || 'Tu perfil';
 
   const [productos, setProductos] = useState(() => {
     const guardados = localStorage.getItem('mkt_productos');
@@ -43,6 +52,12 @@ export default function Marketplace() {
   const [contacto, setContacto] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [imagenUrl, setImagenUrl] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorImageUrl, setEditorImageUrl] = useState(null);
+  const [editorScale, setEditorScale] = useState(1);
+  const [editorOffset, setEditorOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef(null);
   const [valoresInputStock, setValoresInputStock] = useState({});
   const [filtroCategoria, setFiltroCategoria] = useState('Todas');
   const [filtroCiudad, setFiltroCiudad] = useState('Todos');
@@ -51,10 +66,64 @@ export default function Marketplace() {
   const [toastMensaje, setToastMensaje] = useState('');
   const [vendedoraSeleccionada, setVendedoraSeleccionada] = useState(null);
   const [resumenCompra, setResumenCompra] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState('');
+  const misStorageKey = `mkt_misExpanded_${currentUser?.id || 'anon'}`;
+  const [misExpanded, setMisExpanded] = useState(() => {
+    try {
+      const raw = localStorage.getItem(misStorageKey);
+      if (raw === null) return true;
+      return raw === '1';
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const toggleMisExpanded = () => {
+    setMisExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(misStorageKey, next ? '1' : '0');
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const cargarProductos = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setIsLoading(true);
+    setFetchError('');
+    try {
+      const resp = await marketplaceService.listProducts();
+      const loadedProducts = resp.products || resp;
+      if (Array.isArray(loadedProducts) && loadedProducts.length > 0) {
+        setProductos(loadedProducts);
+      }
+    } catch (err) {
+      console.error('Error cargando marketplace:', err);
+      setFetchError(err.message || 'No se pudieron cargar los productos del marketplace');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // keep state in sync if user changes (e.g., login/logout)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(misStorageKey);
+      if (raw !== null) setMisExpanded(raw === '1');
+    } catch (e) {}
+  }, [misStorageKey]);
 
   useEffect(() => {
     localStorage.setItem('mkt_productos', JSON.stringify(productos));
   }, [productos]);
+
+  useEffect(() => {
+    cargarProductos();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('mkt_carrito', JSON.stringify(carrito));
@@ -69,16 +138,82 @@ export default function Marketplace() {
     setTimeout(() => setToastMensaje(''), 3000);
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files;
+  const handleImageChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
     if (file) {
-      const urlTemporal = URL.createObjectURL(file);
-      setImagenUrl(urlTemporal);
-      mostrarToast('Fotografía seleccionada');
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        setEditorImageUrl(dataUrl);
+        setEditorScale(1);
+        setEditorOffset({ x: 0, y: 0 });
+        setEditorOpen(true);
+      } catch (err) {
+        alert(err.message || 'Error al leer la imagen');
+        e.target.value = '';
+      }
     }
   };
 
-  const handleGuardarPublicacion = (e) => {
+  const onEditorMouseDown = (e) => {
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY, ox: editorOffset.x, oy: editorOffset.y };
+  };
+
+  const onEditorMouseMove = (e) => {
+    if (!isDragging || !dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setEditorOffset({ x: dragStartRef.current.ox + dx, y: dragStartRef.current.oy + dy });
+  };
+
+  const onEditorMouseUp = () => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+  };
+
+  const acceptCroppedImage = () => {
+    if (!editorImageUrl) return;
+    const canvas = document.createElement('canvas');
+    const outputSize = 1000; // px, square
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+    const ctx = canvas.getContext('2d');
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = editorImageUrl;
+    img.onload = () => {
+      // Calculate draw parameters based on scale and offset
+      // We'll fit the image so that its center + offset maps into canvas center
+      const iw = img.width;
+      const ih = img.height;
+      const scale = editorScale;
+
+      // Draw image centered and transformed
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, outputSize, outputSize);
+
+      // Compute scaled size
+      const sw = iw * scale;
+      const sh = ih * scale;
+
+      // Compute top-left to draw such that the image center is at canvas center plus offset
+      const cx = outputSize / 2 - editorOffset.x;
+      const cy = outputSize / 2 - editorOffset.y;
+      const dx = cx - sw / 2;
+      const dy = cy - sh / 2;
+
+      ctx.drawImage(img, dx, dy, sw, sh);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      setImagenUrl(dataUrl);
+      setEditorOpen(false);
+      setEditorImageUrl(null);
+      mostrarToast('Imagen ajustada y guardada');
+    };
+    img.onerror = () => alert('No se pudo procesar la imagen');
+  };
+
+  const handleGuardarPublicacion = async (e) => {
     e.preventDefault();
 
     const colorAzar = coloresPastel[Math.floor(Math.random() * coloresPastel.length)];
@@ -86,7 +221,10 @@ export default function Marketplace() {
 
     const nuevoProducto = {
       id: nuevoId,
-      nombre: USUARIO_LOGUEADO,
+      nombre: currentUser?.nombre || usuarioPerfilNombre,
+      usuario_id: currentUser?.id || null,
+      vendedor_nombre: currentUser?.nombre || usuarioPerfilNombre,
+      propio: true,
       emprendimiento,
       categoria,
       precio: parseFloat(precio),
@@ -99,8 +237,36 @@ export default function Marketplace() {
       imagen: imagenUrl
     };
 
-    setProductos([nuevoProducto, ...productos]);
-    mostrarToast('Publicación guardada');
+    // Si el usuario está autenticado, enviar al backend
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = {
+          nombreArticulo,
+          emprendimiento,
+          categoria,
+          precio: parseFloat(precio),
+          ciudad: ciudad || null,
+          contacto: contacto || null,
+          descripcion: descripcion || null,
+          stock: parseInt(stock, 10),
+          imagen: imagenUrl || null,
+        };
+        const resp = await marketplaceService.createProduct(payload);
+        const saved = resp.product || resp;
+        setProductos([saved, ...productos]);
+        mostrarToast('Publicación guardada en el servidor');
+      } catch (err) {
+        console.error('Error al guardar en backend:', err);
+        // fallback local
+        setProductos([nuevoProducto, ...productos]);
+        setFetchError('No se pudo guardar en el servidor. Publicación guardada localmente.');
+        mostrarToast('Publicación guardada localmente (error servidor)');
+      }
+    } else {
+      setProductos([nuevoProducto, ...productos]);
+      mostrarToast('Publicación guardada');
+    }
 
     setNombreArticulo('');
     setEmprendimiento('');
@@ -149,7 +315,7 @@ export default function Marketplace() {
     } else {
       const productoAsociado = productos.find((p) => p.emprendimiento === nombreMarca);
       setVendedoraSeleccionada({
-        nombre: nombrePersona || productoAsociado?.nombre || USUARIO_LOGUEADO,
+        nombre: nombrePersona || productoAsociado?.nombre || usuarioPerfilNombre,
         negocio: nombreMarca,
         ciudad: productoAsociado?.ciudad || 'Cuautitlán',
         contacto: productoAsociado?.contacto || '',
@@ -217,15 +383,28 @@ export default function Marketplace() {
     setProductos(productos.map((p) => (p.id === productoId ? { ...p, stock: p.stock + item.cantidad } : p)));
   };
 
-  const handleEliminarPublicacion = (productoId) => {
-    if (window.confirm('¿Deseas eliminar esta publicación?')) {
-      setProductos(productos.filter((p) => p.id !== productoId));
-      setCarrito(carrito.filter((c) => c.id !== productoId));
-      mostrarToast('Publicación eliminada');
+  const handleEliminarPublicacion = async (productoId) => {
+    if (!window.confirm('¿Deseas eliminar esta publicación?')) return;
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        await marketplaceService.deleteProduct(productoId);
+        setProductos((prevProductos) => prevProductos.filter((p) => p.id !== productoId));
+        setCarrito((prevCarrito) => prevCarrito.filter((c) => c.id !== productoId));
+        mostrarToast('Publicación eliminada');
+        return;
+      } catch (error) {
+        console.error('Error eliminando publicación:', error);
+        mostrarToast('No se pudo eliminar en el servidor. Se eliminó localmente.');
+      }
     }
+
+    setProductos((prevProductos) => prevProductos.filter((p) => p.id !== productoId));
+    setCarrito((prevCarrito) => prevCarrito.filter((c) => c.id !== productoId));
   };
 
-  const handleFinalizarCompra = () => {
+  const handleFinalizarCompra = async () => {
     if (carrito.length === 0) return;
 
     setResumenCompra([...carrito]);
@@ -239,10 +418,33 @@ export default function Marketplace() {
       fecha: new Date().toLocaleDateString('es-MX')
     }));
 
+    const purchasePayload = {
+      items: carrito.map((item) => ({
+        productoId: item.id,
+        cantidad: item.cantidad,
+        monto: item.precio * item.cantidad,
+        sellerId: item.usuario_id || item.sellerId || null,
+        nombreArticulo: item.nombreArticulo || item.nombre,
+        fecha: new Date().toLocaleDateString('es-MX'),
+      })),
+    };
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        await authService.purchaseMarketplace(purchasePayload);
+        window.dispatchEvent(new Event('finanzasActualizadas'));
+        mostrarToast('Compra registrada en finanzas.');
+      } catch (error) {
+        console.error('Error al registrar compra en finanzas:', error);
+        mostrarToast('Compra completada, pero no se pudo registrar en finanzas.');
+      }
+    }
+
     setHistorialVentas([...nuevasVentasHistorial, ...historialVentas]);
     setCarrito([]);
     setVerCarrito(false);
-    mostrarToast('Compra finalizada');
+    if (!token) mostrarToast('Compra completada localmente. Inicia sesión para registrar en finanzas.');
   };
 
   const ciudadesDisponibles = ['Todos', ...new Set(productos.map((p) => p.ciudad).filter(Boolean))];
@@ -255,7 +457,78 @@ export default function Marketplace() {
     return cumpleCategoria && cumpleCiudad && cumpleBusqueda;
   });
 
+  // separar mis articulos (del usuario) y el resto — ahora respetando filtros
+  const misArticulos = productosFiltrados.filter((p) => {
+    if (p.propio) return true;
+    if (!currentUser) return false;
+    return (
+      (p.usuario_id && String(p.usuario_id) === String(currentUser.id)) ||
+      p.vendedor_nombre === currentUser.nombre ||
+      p.nombre === currentUser.nombre
+    );
+  });
+
+  const otrosProductos = productosFiltrados.filter((p) => !misArticulos.find((m) => m.id === p.id));
+
   const totalCarrito = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+
+  const renderProductCard = (p) => {
+    const agotado = p.stock <= 0;
+    const tituloCard = p.nombreArticulo || p.nombre;
+    const esPropio = p.propio || (currentUser && ((p.usuario_id && String(p.usuario_id) === String(currentUser.id)) || p.vendedor_nombre === currentUser.nombre || p.nombre === currentUser.nombre));
+    const puedeEliminar = esPropio || currentUser?.rol === 'admin';
+
+    return (
+      <article className="mkt-product-card" key={p.id}>
+        {puedeEliminar && (
+          <button type="button" className="mkt-delete-post" onClick={() => handleEliminarPublicacion(p.id)} title="Eliminar Publicación">
+            ×
+          </button>
+        )}
+
+        <div className="mkt-img-block" style={{ backgroundColor: p.imagen ? 'transparent' : p.colorFondo }}>
+          {p.imagen ? (
+            <img src={p.imagen} alt={tituloCard} />
+          ) : (
+            <span style={{ color: 'white', fontWeight: 'bold', letterSpacing: '1px', fontSize: '0.8rem' }}>{p.categoria.toUpperCase()}</span>
+          )}
+        </div>
+
+        <div className="mkt-product-body">
+          <div className="mkt-product-title-row">
+            <h3 className="mkt-product-title">{tituloCard}</h3>
+            {esPropio && <span className="mkt-product-badge">Mi producto</span>}
+          </div>
+
+          <button type="button" className="mkt-product-vendor" onClick={() => handleAbrirPerfil(p.emprendimiento, p.nombre)}>
+            @{p.emprendimiento} • {p.ciudad}
+          </button>
+
+          <p className="mkt-product-desc-short">{p.descripcion}</p>
+
+          <div className="mkt-footer-row">
+            <div>
+              <span className="mkt-product-price">${p.precio} MXN</span>
+              <span className="mkt-stock-indicator">{agotado ? 'Sin existencias' : `Disponibles: ${p.stock} u.`}</span>
+
+              {esPropio && (
+                <div className="mkt-stock-actions">
+                  <input type="number" min="0" className="mkt-stock-mini-input" placeholder="Cant." value={valoresInputStock[p.id] || ''} onChange={(e) => handleCambiarInputStock(p.id, e.target.value)} />
+                  <button type="button" className="mkt-stock-save-btn" onClick={() => handleGuardarStockIndividual(p.id)}>
+                    Guardar
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button type="button" className="mkt-contact-btn" disabled={agotado} onClick={() => handleAñadirAlCarrito(p)}>
+              {agotado ? 'Agotado' : 'Agregar'}
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <div className="mkt-page-wrapper">
@@ -263,6 +536,8 @@ export default function Marketplace() {
         <span className="mkt-vinculo">Vinculación Comercial</span>
         <h1>Marketplace de emprendedoras</h1>
         <p>Un catálogo para publicar, buscar y consultar productos o servicios ofrecidos por mujeres emprendedoras.</p>
+        {isLoading && <p style={{ color: '#8b5cf6' }}>Cargando productos del servidor...</p>}
+        {fetchError && <p style={{ color: '#dc2626' }}>{fetchError}</p>}
       </header>
 
       <div className="mkt-container">
@@ -272,7 +547,7 @@ export default function Marketplace() {
             <p>Sube tu producto o servicio</p>
 
             <label>Nombre de la Vendedora (Tu Perfil)</label>
-            <input type="text" value={USUARIO_LOGUEADO} readOnly style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: '#64748b' }} />
+            <input type="text" value={usuarioPerfilNombre} readOnly style={{ backgroundColor: '#f1f5f9', cursor: 'not-allowed', color: '#64748b' }} />
 
             <label>Nombre de tu Marca o Tienda</label>
             <input type="text" placeholder="Ej. Vacabonita" value={emprendimiento} onChange={(e) => setEmprendimiento(e.target.value)} required />
@@ -284,7 +559,41 @@ export default function Marketplace() {
             <div className="mkt-file-upload">
               <input type="file" accept="image/*" onChange={handleImageChange} id="file-input" />
               <label htmlFor="file-input" className="file-label">Seleccionar archivo</label>
+              {imagenUrl && (
+                <div className="mkt-image-thumb">
+                  <img src={imagenUrl} alt="Preview" />
+                </div>
+              )}
             </div>
+
+            {editorOpen && (
+              <div className="mkt-editor-backdrop">
+                <div className="mkt-editor-modal">
+                  <div className="mkt-editor-canvas"
+                    onMouseDown={onEditorMouseDown}
+                    onMouseMove={onEditorMouseMove}
+                    onMouseUp={onEditorMouseUp}
+                    onMouseLeave={onEditorMouseUp}
+                  >
+                    <img
+                      src={editorImageUrl}
+                      alt="Editor"
+                      style={{ transform: `translate(${editorOffset.x}px, ${editorOffset.y}px) scale(${editorScale})` }}
+                      draggable={false}
+                    />
+                  </div>
+                  <div className="mkt-editor-controls">
+                    <label>Zoom</label>
+                    <input type="range" min="0.5" max="3" step="0.01" value={editorScale} onChange={(e) => setEditorScale(Number(e.target.value))} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button type="button" className="mkt-btn" onClick={acceptCroppedImage}>Aceptar</button>
+                      <button type="button" className="mkt-btn mkt-btn-secondary" onClick={() => { setEditorOpen(false); setEditorImageUrl(null); }}>Cancelar</button>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 8 }}>Arrastra la imagen para posicionarla, usa el control de zoom para ajustar.</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <label>Categoría</label>
             <select value={categoria} onChange={(e) => setCategoria(e.target.value)}>
@@ -406,65 +715,34 @@ export default function Marketplace() {
             </div>
           )}
 
-          <div className="mkt-product-grid">
-            {productosFiltrados.length === 0 ? (
-              <p style={{ textAlign: 'center', gridColumn: '1/-1', color: '#64748b', padding: '40px' }}>No se encontraron productos que coincidan con la búsqueda.</p>
-            ) : (
-              productosFiltrados.map((p) => {
-                const agotado = p.stock <= 0;
-                const tituloCard = p.nombreArticulo || p.nombre;
-                const esPropio = p.emprendimiento !== 'Carmen' && p.emprendimiento !== 'Lucía' && p.emprendimiento !== 'Marta';
+          {misArticulos.length > 0 && (
+            <section className="mkt-section mkt-mis-articulos">
+              <div className="mkt-section-header">
+                <h3>Mis artículos</h3>
+                <button type="button" className={`mkt-toggle-btn ${misExpanded ? 'open' : 'collapsed'}`} onClick={toggleMisExpanded} aria-expanded={misExpanded} aria-label={misExpanded ? 'Colapsar Mis artículos' : 'Expandir Mis artículos'}>
+                  <span className="mkt-toggle-icon">{misExpanded ? '▾' : '▸'}</span>
+                </button>
+              </div>
+              {misExpanded && (
+                <div className="mkt-section-grid">
+                  {misArticulos.map((p) => renderProductCard(p))}
+                </div>
+              )}
+            </section>
+          )}
 
-                return (
-                  <article className="mkt-product-card" key={p.id}>
-                    {esPropio && (
-                      <button type="button" className="mkt-delete-post" onClick={() => handleEliminarPublicacion(p.id)} title="Eliminar Publicación">
-                        ×
-                      </button>
-                    )}
-
-                    <div className="mkt-img-block" style={{ backgroundColor: p.imagen ? 'transparent' : p.colorFondo }}>
-                      {p.imagen ? (
-                        <img src={p.imagen} alt={tituloCard} />
-                      ) : (
-                        <span style={{ color: 'white', fontWeight: 'bold', letterSpacing: '1px', fontSize: '0.8rem' }}>{p.categoria.toUpperCase()}</span>
-                      )}
-                    </div>
-
-                    <div className="mkt-product-body">
-                      <h3 className="mkt-product-title">{tituloCard}</h3>
-
-                      <button type="button" className="mkt-product-vendor" onClick={() => handleAbrirPerfil(p.emprendimiento, p.nombre)}>
-                        @{p.emprendimiento} • {p.ciudad}
-                      </button>
-
-                      <p className="mkt-product-desc-short">{p.descripcion}</p>
-
-                      <div className="mkt-footer-row">
-                        <div>
-                          <span className="mkt-product-price">${p.precio} MXN</span>
-                          <span className="mkt-stock-indicator">{agotado ? 'Sin existencias' : `Disponibles: ${p.stock} u.`}</span>
-
-                          {esPropio && (
-                            <div className="mkt-stock-actions">
-                              <input type="number" min="0" className="mkt-stock-mini-input" placeholder="Cant." value={valoresInputStock[p.id] || ''} onChange={(e) => handleCambiarInputStock(p.id, e.target.value)} />
-                              <button type="button" className="mkt-stock-save-btn" onClick={() => handleGuardarStockIndividual(p.id)}>
-                                Guardar
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        <button type="button" className="mkt-contact-btn" disabled={agotado} onClick={() => handleAñadirAlCarrito(p)}>
-                          {agotado ? 'Agotado' : 'Agregar'}
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
+          <section className="mkt-section mkt-marketplace">
+            <div className="mkt-section-header">
+              <h3>Marketplace</h3>
+            </div>
+            <div className="mkt-section-grid">
+              {otrosProductos.length === 0 ? (
+                <p style={{ textAlign: 'center', gridColumn: '1/-1', color: '#64748b', padding: '40px' }}>No se encontraron productos que coincidan con la búsqueda.</p>
+              ) : (
+                otrosProductos.map((p) => renderProductCard(p))
+              )}
+            </div>
+          </section>
         </main>
       </div>
 

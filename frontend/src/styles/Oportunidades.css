@@ -10,9 +10,10 @@
 }
 
 .badge-categoria {
-  background-color: #212529;
-  color: #fff;
-  font-weight: 500;
+  background-color: #212529 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em;
 }
 
 .badge-abierta {

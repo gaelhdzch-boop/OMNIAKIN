@@ -1,8 +1,50 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { getUserByEmail, createUser, getUserById, getUserWithPasswordById, updateUserPassword, updateUserProfile, updateUserSecurityQuestion, getAllUsers, updateUserRole, createPasswordResetToken, getPasswordResetByToken, markPasswordResetTokenUsed, getUserCourseProgress, registerUserCourse, updateUserCourseProgress, getMarketplaceProducts, createMarketplaceProduct, updateMarketplaceProductStock, deleteMarketplaceProduct } from '../models/userModel.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import {
+  getUserByEmail,
+  createUser,
+  getUserById,
+  getUserWithPasswordById,
+  updateUserPassword,
+  updateUserProfile,
+  updateUserSecurityQuestion,
+  getAllUsers,
+  updateUserRole,
+  createPasswordResetToken,
+  getPasswordResetByToken,
+  markPasswordResetTokenUsed,
+  getUserCourseProgress,
+  registerUserCourse,
+  updateUserCourseProgress,
+  getMarketplaceProducts,
+  createMarketplaceProduct,
+  updateMarketplaceProductStock,
+  updateMarketplaceProductStockAsAdmin,
+  updateMarketplaceProductAsAdmin,
+  deleteMarketplaceProduct,
+  deleteMarketplaceProductAsAdmin,
+  getMarketplaceProductById,
+  decrementMarketplaceProductStock,
+  getFinanzasMovimientos,
+  createFinanzasMovimiento,
+  getFinanzasMetas,
+  saveFinanzasMetas,
+  getCourses,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getOpportunities,
+  createOpportunity,
+  updateOpportunity,
+  deleteOpportunity,
+} from '../models/userModel.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // RF-1.1: Registro
 export const register = async (req, res) => {
@@ -284,6 +326,57 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+export const getFinanzasController = async (req, res) => {
+  try {
+    const movimientos = await getFinanzasMovimientos(req.user.id);
+    const metas = await getFinanzasMetas(req.user.id);
+
+    res.status(200).json({ movimientos, metas });
+  } catch (error) {
+    console.error('Error al obtener finanzas:', error);
+    res.status(500).json({ message: 'Error al cargar tus finanzas' });
+  }
+};
+
+export const createFinanzasMovimientoController = async (req, res) => {
+  try {
+    const { concepto, categoria, monto, fecha } = req.body;
+
+    if (!concepto || !categoria || monto === undefined || monto === null) {
+      return res.status(400).json({ message: 'Concepto, categoría y monto son requeridos' });
+    }
+
+    const montoNumber = Number(monto);
+    if (Number.isNaN(montoNumber) || montoNumber <= 0) {
+      return res.status(400).json({ message: 'El monto debe ser un número mayor a cero' });
+    }
+
+    const movimiento = await createFinanzasMovimiento(req.user.id, concepto.trim(), categoria, montoNumber, fecha || 'Hoy');
+
+    res.status(201).json({ message: 'Movimiento agregado correctamente', movimiento });
+  } catch (error) {
+    console.error('Error al guardar movimiento:', error);
+    res.status(500).json({ message: 'No se pudo guardar el movimiento' });
+  }
+};
+
+export const updateFinanzasMetasController = async (req, res) => {
+  try {
+    const { metas } = req.body;
+
+    if (!Array.isArray(metas)) {
+      return res.status(400).json({ message: 'La estructura de metas es inválida' });
+    }
+
+    const metasGuardadas = await saveFinanzasMetas(req.user.id, metas);
+
+    res.status(200).json({ message: 'Metas guardadas correctamente', metas: metasGuardadas });
+  } catch (error) {
+    console.error('Error al guardar metas:', error);
+    res.status(500).json({ message: 'No se pudieron guardar las metas' });
+  }
+};
+
 export const getMarketplaceProductsController = async (req, res) => {
   try {
     const products = await getMarketplaceProducts();
@@ -297,6 +390,25 @@ export const getMarketplaceProductsController = async (req, res) => {
 export const createMarketplaceProductController = async (req, res) => {
   try {
     const { nombreArticulo, emprendimiento, categoria, precio, ciudad, contacto, descripcion, stock, imagen } = req.body;
+
+    // Procesar imagen dataURL si viene en base64 y guardarla en /uploads/marketplace
+    let imagenPathToSave = null;
+    if (imagen && typeof imagen === 'string' && imagen.startsWith('data:')) {
+      const matches = imagen.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (matches) {
+        const mime = matches[1];
+        const ext = mime.split('/')[1] === 'jpeg' ? 'jpg' : mime.split('/')[1];
+        const base64Data = matches[2];
+        const uploadsDir = path.join(__dirname, '..', 'uploads', 'marketplace');
+        await fs.promises.mkdir(uploadsDir, { recursive: true });
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+        await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
+        imagenPathToSave = `/uploads/marketplace/${filename}`;
+      }
+    } else if (imagen) {
+      imagenPathToSave = imagen;
+    }
 
     if (!nombreArticulo || !emprendimiento || !categoria || precio === undefined || precio === null || stock === undefined || stock === null) {
       return res.status(400).json({ message: 'Nombre del artículo, emprendimiento, categoría, precio y stock son requeridos' });
@@ -318,13 +430,36 @@ export const createMarketplaceProductController = async (req, res) => {
       contacto || null,
       descripcion || null,
       stockNumber,
-      imagen || null
+      imagenPathToSave || null
     );
 
     res.status(201).json({ message: 'Producto publicado correctamente', product });
   } catch (error) {
     console.error('Error al publicar producto en el marketplace:', error);
     res.status(500).json({ message: 'Error al publicar el producto' });
+  }
+};
+
+export const deleteMarketplaceProductController = async (req, res) => {
+  try {
+    const productoId = req.params.id;
+
+    if (!productoId) {
+      return res.status(400).json({ message: 'ID del producto es requerido' });
+    }
+
+    const deleted = req.user.rol === 'admin'
+      ? await deleteMarketplaceProductAsAdmin(productoId)
+      : await deleteMarketplaceProduct(req.user.id, productoId);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Producto no encontrado o no tienes permisos para eliminarlo' });
+    }
+
+    res.status(200).json({ message: 'Publicación eliminada correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar producto del marketplace:', error);
+    res.status(500).json({ message: 'Error al eliminar el producto' });
   }
 };
 
@@ -342,7 +477,10 @@ export const updateMarketplaceProductStockController = async (req, res) => {
       return res.status(400).json({ message: 'Stock debe ser un número válido no negativo' });
     }
 
-    const product = await updateMarketplaceProductStock(req.user.id, productoId, stockNumber);
+    const product = req.user.rol === 'admin'
+      ? await updateMarketplaceProductStockAsAdmin(productoId, stockNumber)
+      : await updateMarketplaceProductStock(req.user.id, productoId, stockNumber);
+
     if (!product) {
       return res.status(404).json({ message: 'Producto no encontrado o no tienes permisos para editarlo' });
     }
@@ -354,23 +492,321 @@ export const updateMarketplaceProductStockController = async (req, res) => {
   }
 };
 
-export const deleteMarketplaceProductController = async (req, res) => {
+export const updateMarketplaceProductController = async (req, res) => {
   try {
     const productoId = req.params.id;
+    const { nombreArticulo, emprendimiento, categoria, precio, ciudad, contacto, descripcion, stock, imagen } = req.body;
+
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'No tienes permisos para modificar este producto' });
+    }
 
     if (!productoId) {
       return res.status(400).json({ message: 'ID del producto es requerido' });
     }
 
-    const deleted = await deleteMarketplaceProduct(req.user.id, productoId);
-    if (!deleted) {
-      return res.status(404).json({ message: 'Producto no encontrado o no tienes permisos para eliminarlo' });
+    const precioNumber = precio !== undefined && precio !== null ? Number(precio) : null;
+    const stockNumber = stock !== undefined && stock !== null ? Number(stock) : null;
+
+    if (precioNumber !== null && (Number.isNaN(precioNumber) || precioNumber < 0)) {
+      return res.status(400).json({ message: 'Precio debe ser un número válido no negativo' });
+    }
+    if (stockNumber !== null && (Number.isNaN(stockNumber) || stockNumber < 0)) {
+      return res.status(400).json({ message: 'Stock debe ser un número válido no negativo' });
     }
 
-    res.status(200).json({ message: 'Publicación eliminada correctamente' });
+    const product = await updateMarketplaceProductAsAdmin(
+      productoId,
+      nombreArticulo,
+      emprendimiento,
+      categoria,
+      precioNumber,
+      ciudad || null,
+      contacto || null,
+      descripcion || null,
+      stockNumber,
+      imagen || null
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+
+    res.status(200).json({ message: 'Producto actualizado correctamente', product });
   } catch (error) {
-    console.error('Error al eliminar producto del marketplace:', error);
-    res.status(500).json({ message: 'Error al eliminar el producto' });
+    console.error('Error al actualizar producto del marketplace:', error);
+    res.status(500).json({ message: 'Error al actualizar el producto' });
+  }
+};
+
+export const listCoursesController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+    const courses = await getCourses();
+    res.status(200).json({ courses });
+  } catch (error) {
+    console.error('Error al listar cursos:', error);
+    res.status(500).json({ message: 'Error al obtener los cursos' });
+  }
+};
+
+export const listCoursesPublicController = async (req, res) => {
+  try {
+    const courses = await getCourses();
+    res.status(200).json({ courses });
+  } catch (error) {
+    console.error('Error al listar cursos públicos:', error);
+    res.status(500).json({ message: 'Error al obtener los cursos' });
+  }
+};
+
+export const createCourseController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+
+    const { titulo, descripcion, categoria, nivel, instructor, duracion, recursos, precio } = req.body;
+    if (!titulo || !categoria) {
+      return res.status(400).json({ message: 'Título y categoría son requeridos' });
+    }
+
+    const course = await createCourse(
+      titulo,
+      descripcion || '',
+      categoria,
+      nivel || 'Básico',
+      instructor || '',
+      duracion || '',
+      Array.isArray(recursos) ? recursos : [],
+      Number(precio || 0)
+    );
+    res.status(201).json({ message: 'Curso creado correctamente', course });
+  } catch (error) {
+    console.error('Error al crear curso:', error);
+    res.status(500).json({ message: 'Error al crear el curso' });
+  }
+};
+
+export const updateCourseController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+
+    const courseId = req.params.id;
+    const { titulo, descripcion, categoria, nivel, instructor, duracion, recursos, precio, estado } = req.body;
+    if (!courseId || !titulo || !categoria) {
+      return res.status(400).json({ message: 'ID, título y categoría son requeridos' });
+    }
+
+    const course = await updateCourse(
+      courseId,
+      titulo,
+      descripcion || '',
+      categoria,
+      nivel || 'Básico',
+      instructor || '',
+      duracion || '',
+      Array.isArray(recursos) ? recursos : [],
+      Number(precio || 0),
+      estado || 'activo'
+    );
+
+    if (!course) {
+      return res.status(404).json({ message: 'Curso no encontrado' });
+    }
+
+    res.status(200).json({ message: 'Curso actualizado correctamente', course });
+  } catch (error) {
+    console.error('Error al actualizar curso:', error);
+    res.status(500).json({ message: 'Error al actualizar el curso' });
+  }
+};
+
+export const deleteCourseController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+
+    const courseId = req.params.id;
+    if (!courseId) {
+      return res.status(400).json({ message: 'ID del curso es requerido' });
+    }
+
+    const deleted = await deleteCourse(courseId);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Curso no encontrado' });
+    }
+
+    res.status(200).json({ message: 'Curso eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar curso:', error);
+    res.status(500).json({ message: 'Error al eliminar el curso' });
+  }
+};
+
+export const listOpportunitiesController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+    const opportunities = await getOpportunities();
+    res.status(200).json({ opportunities });
+  } catch (error) {
+    console.error('Error al listar oportunidades:', error);
+    res.status(500).json({ message: 'Error al obtener las oportunidades' });
+  }
+};
+
+export const listOpportunitiesPublicController = async (req, res) => {
+  try {
+    const opportunities = await getOpportunities();
+    res.status(200).json({ opportunities });
+  } catch (error) {
+    console.error('Error al listar oportunidades públicas:', error);
+    res.status(500).json({ message: 'Error al obtener las oportunidades' });
+  }
+};
+
+export const createOpportunityController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+
+    const { titulo, organizacion, categoria, estado, descripcion, monto, ciudad, contacto, requisitos } = req.body;
+    if (!titulo || !organizacion || !categoria || !estado || !descripcion) {
+      return res.status(400).json({ message: 'Título, organización, categoría, estado y descripción son requeridos' });
+    }
+
+    const opportunity = await createOpportunity(
+      titulo,
+      organizacion,
+      categoria,
+      estado,
+      descripcion,
+      monto || '',
+      ciudad || '',
+      contacto || '',
+      Array.isArray(requisitos) ? requisitos : []
+    );
+    res.status(201).json({ message: 'Oportunidad creada correctamente', opportunity });
+  } catch (error) {
+    console.error('Error al crear oportunidad:', error);
+    res.status(500).json({ message: 'Error al crear la oportunidad' });
+  }
+};
+
+export const updateOpportunityController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+
+    const opportunityId = req.params.id;
+    const { titulo, organizacion, categoria, estado, descripcion, monto, ciudad, contacto, requisitos } = req.body;
+    if (!opportunityId || !titulo || !organizacion || !categoria || !estado || !descripcion) {
+      return res.status(400).json({ message: 'ID, título, organización, categoría, estado y descripción son requeridos' });
+    }
+
+    const opportunity = await updateOpportunity(
+      opportunityId,
+      titulo,
+      organizacion,
+      categoria,
+      estado,
+      descripcion,
+      monto || '',
+      ciudad || '',
+      contacto || '',
+      Array.isArray(requisitos) ? requisitos : []
+    );
+    if (!opportunity) {
+      return res.status(404).json({ message: 'Oportunidad no encontrada' });
+    }
+
+    res.status(200).json({ message: 'Oportunidad actualizada correctamente', opportunity });
+  } catch (error) {
+    console.error('Error al actualizar oportunidad:', error);
+    res.status(500).json({ message: 'Error al actualizar la oportunidad' });
+  }
+};
+
+export const deleteOpportunityController = async (req, res) => {
+  try {
+    if (req.user.rol !== 'admin') {
+      return res.status(403).json({ message: 'Acceso denegado. Solo administradores' });
+    }
+
+    const opportunityId = req.params.id;
+    if (!opportunityId) {
+      return res.status(400).json({ message: 'ID de la oportunidad es requerido' });
+    }
+
+    const deleted = await deleteOpportunity(opportunityId);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Oportunidad no encontrada' });
+    }
+
+    res.status(200).json({ message: 'Oportunidad eliminada correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar oportunidad:', error);
+    res.status(500).json({ message: 'Error al eliminar la oportunidad' });
+  }
+};
+
+export const purchaseMarketplaceController = async (req, res) => {
+  try {
+    const { items } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'No hay artículos para procesar en la compra' });
+    }
+
+    const movimientosCreados = [];
+    const productosActualizados = [];
+
+    for (const item of items) {
+      const cantidad = Number(item.cantidad) || 1;
+      const monto = Number(item.monto);
+      if (Number.isNaN(monto) || monto <= 0 || cantidad <= 0) {
+        continue;
+      }
+
+      let producto = null;
+      if (item.productoId) {
+        producto = await getMarketplaceProductById(item.productoId);
+      }
+
+      if (producto) {
+        if (producto.stock < cantidad) {
+          return res.status(400).json({ message: `Stock insuficiente para ${producto.nombre_articulo || producto.emprendimiento}` });
+        }
+
+        await decrementMarketplaceProductStock(item.productoId, cantidad);
+        productosActualizados.push({ ...producto, stock: Math.max(producto.stock - cantidad, 0) });
+      }
+
+      const gastoConcepto = `Compra: ${item.nombreArticulo || item.nombre || 'Marketplace'}`;
+      const gastoMovimiento = await createFinanzasMovimiento(req.user.id, gastoConcepto, 'Gastos', monto, item.fecha || 'Hoy');
+      movimientosCreados.push(gastoMovimiento);
+
+      const vendedorId = item.sellerId;
+      if (Number(vendedorId) && Number(vendedorId) !== Number(req.user.id)) {
+        const ingresoConcepto = `Venta: ${item.nombreArticulo || item.nombre || 'Marketplace'}`;
+        const ingresoMovimiento = await createFinanzasMovimiento(Number(vendedorId), ingresoConcepto, 'Ingresos', monto, item.fecha || 'Hoy');
+        movimientosCreados.push(ingresoMovimiento);
+      }
+    }
+
+    res.status(200).json({ message: 'Compra procesada correctamente', movimientos: movimientosCreados, productosActualizados });
+  } catch (error) {
+    console.error('Error al procesar compra del marketplace:', error);
+    res.status(500).json({ message: 'Error al procesar la compra' });
   }
 };
 
@@ -510,5 +946,98 @@ export const updateUserRoleController = async (req, res) => {
   } catch (error) {
     console.error('Error al actualizar rol:', error);
     res.status(500).json({ message: 'Error al actualizar rol' });
+  }
+};
+
+// RF-1.5: Revelar contraseña de usuario (solo admin)
+export const revealUserPasswordController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { contraseñaAdmin } = req.body;
+
+    if (!id || !contraseñaAdmin) {
+      return res.status(400).json({ message: 'ID de usuario y contraseña de administrador son requeridos' });
+    }
+
+    const adminUser = await getUserWithPasswordById(req.user.id);
+    if (!adminUser) {
+      return res.status(401).json({ message: 'Administrador no encontrado' });
+    }
+
+    const contraseñaValida = await bcrypt.compare(contraseñaAdmin, adminUser.contraseña);
+    if (!contraseñaValida) {
+      return res.status(401).json({ message: 'Contraseña de administrador incorrecta' });
+    }
+
+    const usuario = await getUserWithPasswordById(id);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json({
+      user: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: usuario.rol,
+      },
+      passwordHash: usuario.contraseña,
+      message: 'Se muestra el hash de la contraseña. Las contraseñas no están disponibles en texto plano por seguridad.',
+    });
+  } catch (error) {
+    console.error('Error al revelar la contraseña:', error);
+    res.status(500).json({ message: 'Error al revelar la contraseña' });
+  }
+};
+
+// RF-1.5: Resetear contraseña del usuario (solo admin)
+export const resetUserPasswordController = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { contraseñaAdmin } = req.body;
+
+    if (!id || !contraseñaAdmin) {
+      return res.status(400).json({ message: 'ID de usuario y contraseña de administrador son requeridos' });
+    }
+
+    const adminUser = await getUserWithPasswordById(req.user.id);
+    if (!adminUser) {
+      return res.status(401).json({ message: 'Administrador no encontrado' });
+    }
+
+    const contraseñaValida = await bcrypt.compare(contraseñaAdmin, adminUser.contraseña);
+    if (!contraseñaValida) {
+      return res.status(401).json({ message: 'Contraseña de administrador incorrecta' });
+    }
+
+    const usuario = await getUserWithPasswordById(id);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    const generateTemporaryPassword = () => {
+      const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
+      return Array.from({ length: 12 }, () => caracteres[Math.floor(Math.random() * caracteres.length)]).join('');
+    };
+
+    const temporaryPassword = generateTemporaryPassword();
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(temporaryPassword, salt);
+
+    await updateUserPassword(usuario.id, hashedPassword);
+
+    res.status(200).json({
+      message: 'Contraseña temporal generada y actualizada correctamente',
+      temporaryPassword,
+      user: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: usuario.rol,
+      },
+    });
+  } catch (error) {
+    console.error('Error al resetear la contraseña:', error);
+    res.status(500).json({ message: 'Error al resetear la contraseña' });
   }
 };

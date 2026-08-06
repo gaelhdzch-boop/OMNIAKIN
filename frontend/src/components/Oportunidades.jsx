@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { oportunidadesData } from '../data/oportunidadesData';
 import { COLORS } from '../constants/colors';
+import { publicService } from '../services/api';
 import '../styles/Oportunidades.css';
 
 const Oportunidades = ({ isAuthenticated }) => {
@@ -11,7 +11,10 @@ const Oportunidades = ({ isAuthenticated }) => {
   const [estadoFiltrado, setEstadoFiltrado] = useState('todos');
   const [expandedOpportunityId, setExpandedOpportunityId] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [error, setError] = useState('');
   const [postulaciones, setPostulaciones] = useState([]);
+  const [oportunidades, setOportunidades] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadApplications = () => {
@@ -26,6 +29,23 @@ const Oportunidades = ({ isAuthenticated }) => {
     loadApplications();
     window.addEventListener('opportunities:updated', loadApplications);
     return () => window.removeEventListener('opportunities:updated', loadApplications);
+  }, []);
+
+  useEffect(() => {
+    const cargarOportunidades = async () => {
+      try {
+        setLoading(true);
+        const data = await publicService.listOpportunities();
+        setOportunidades(data.opportunities || []);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'No se pudieron cargar las oportunidades');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    cargarOportunidades();
   }, []);
 
   const handleExplorarClick = () => {
@@ -62,7 +82,7 @@ const Oportunidades = ({ isAuthenticated }) => {
     }
   };
 
-  const oportunidadesFiltradas = oportunidadesData.filter((item) => {
+  const oportunidadesFiltradas = oportunidades.filter((item) => {
     const coincideTexto =
       item.titulo.toLowerCase().includes(busqueda.toLowerCase()) ||
       item.organizacion.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -76,36 +96,26 @@ const Oportunidades = ({ isAuthenticated }) => {
 
   return (
     <>
-      <section id="oportunidades" className="container py-5 mb-3">
-        <div
-          className="p-5 rounded-4 text-center shadow-sm"
-          style={{ backgroundColor: COLORS.opportunitiesBg || '#e8f5e9' }}
-        >
-          <h2 className="fw-bold mb-3">Oportunidades para ti</h2>
-          <p className="mx-auto mb-4" style={{ maxWidth: '700px' }}>
+      <section id="oportunidades" className="container py-4 mb-3">
+        <div className="section-header mb-3">
+          <h2 className="section-title">Oportunidades para ti</h2>
+          <p className="section-copy mb-3">
             Descubre empleos, becas, convocatorias de programas de gobierno, financiamiento y mentorías todo específicamente para mujeres emprendedoras.
           </p>
-          <button
-            className="btn bg-white rounded-pill px-4 py-2 fw-bold shadow-sm"
-            style={{ color: '#000', border: 'none' }}
-            onClick={handleExplorarClick}
-          >
-            Explorar oportunidades &rarr;
-          </button>
         </div>
       </section>
 
-      <div ref={panelRef} className="container py-5" style={{ scrollMarginTop: '90px' }}>
-        <div className="text-center mb-5">
+      <div ref={panelRef} className="container py-4" style={{ scrollMarginTop: '90px' }}>
+        <div className="text-center mb-4">
           <h3 className="fw-bold">Panel de Búsqueda</h3>
           <p className="text-muted">Filtra los mejores programas, becas y apoyos vigentes para mujeres emprendedoras.</p>
         </div>
         {feedbackMessage && (
-          <div className="alert alert-success rounded-4 mb-4" role="status">
+          <div className="alert alert-success rounded-4 mb-3" role="status">
             {feedbackMessage}
           </div>
         )}
-        <div className="row g-3 mb-5 bg-light p-4 rounded-4 shadow-sm">
+        <div className="row g-3 mb-4 bg-light p-3 rounded-4 shadow-sm">
           <div className="col-md-6">
             <input
               type="text"
@@ -147,8 +157,12 @@ const Oportunidades = ({ isAuthenticated }) => {
           </div>
         </div>
 
-        {oportunidadesFiltradas.length === 0 ? (
-          <div className="text-center py-5 text-muted">
+        {loading ? (
+          <div className="text-center py-4 text-muted">Cargando oportunidades...</div>
+        ) : error ? (
+          <div className="alert alert-danger">{error}</div>
+        ) : oportunidadesFiltradas.length === 0 ? (
+          <div className="text-center py-4 text-muted">
             <h4>No se encontraron oportunidades</h4>
             <p>Intenta cambiando los términos de búsqueda o los filtros.</p>
           </div>

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { authService } from '../services/api';
 import '../styles/Finanzas.css';
 
 const movimientosIniciales = [];
@@ -43,6 +44,8 @@ export default function Finanzas() {
   const [margen, setMargen] = useState(0);
   const [mensaje, setMensaje] = useState('');
   const [metas, setMetas] = useState(metasIniciales);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
 
   const resumen = useMemo(() => {
     const ingresos = movimientos
@@ -67,6 +70,54 @@ export default function Finanzas() {
     return costoNumero + costoNumero * (margenNumero / 100);
   }, [costo, margen]);
 
+  const cargarFinanzas = async () => {
+    try {
+      setCargando(true);
+      const data = await authService.getFinanzas();
+      const movimientosPersistidos = Array.isArray(data?.movimientos) ? data.movimientos : [];
+      const metasPersistidas = Array.isArray(data?.metas) && data.metas.length
+        ? data.metas
+        : metasIniciales;
+
+      setMovimientos(movimientosPersistidos);
+      setMetas(metasPersistidas);
+    } catch (error) {
+      console.error('No se pudieron cargar las finanzas:', error);
+      setMensaje(error.message || 'No se pudieron cargar tus finanzas.');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarFinanzas();
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      setCargando(false);
+      return;
+    }
+
+    const onFinanzasActualizadas = () => cargarFinanzas();
+    window.addEventListener('finanzasActualizadas', onFinanzasActualizadas);
+    return () => window.removeEventListener('finanzasActualizadas', onFinanzasActualizadas);
+  }, []);
+
+  const guardarMetas = async (metasToSave) => {
+    try {
+      setGuardando(true);
+      await authService.updateFinanzasMetas(metasToSave);
+      setMensaje('Metas guardadas correctamente.');
+    } catch (error) {
+      console.error('No se pudieron guardar las metas:', error);
+      setMensaje(error.message || 'No se pudieron guardar las metas.');
+    } finally {
+      setGuardando(false);
+      setTimeout(() => setMensaje(''), 3000);
+    }
+  };
+
   const actualizarMeta = (index, campo, valor) => {
     setMetas((actuales) =>
       actuales.map((meta, i) =>
@@ -80,7 +131,7 @@ export default function Finanzas() {
     setFormulario((actual) => ({ ...actual, [name]: value }));
   };
 
-  const registrarMovimiento = (evento) => {
+  const registrarMovimiento = async (evento) => {
     evento.preventDefault();
 
     const monto = Number(formulario.monto);
@@ -90,25 +141,29 @@ export default function Finanzas() {
       return;
     }
 
-    const nuevoMovimiento = {
-      id: Date.now(),
-      concepto: formulario.concepto.trim(),
-      categoria: formulario.categoria,
-      monto,
-      fecha: 'Hoy',
-    };
+    try {
+      const movimiento = await authService.createFinanzasMovimiento({
+        concepto: formulario.concepto.trim(),
+        categoria: formulario.categoria,
+        monto,
+        fecha: 'Hoy',
+      });
 
-    setMovimientos((actuales) => [nuevoMovimiento, ...actuales]);
-    setFormulario(formularioVacio);
-    setMensaje('Movimiento agregado al resumen financiero.');
+      setMovimientos((actuales) => [movimiento.movimiento, ...actuales]);
+      setFormulario(formularioVacio);
+      setMensaje('Movimiento agregado al resumen financiero.');
+    } catch (error) {
+      console.error('No se pudo guardar el movimiento:', error);
+      setMensaje(error.message || 'No se pudo guardar el movimiento.');
+    }
   };
 
   return (
     <section className="finanzas-section" id="finanzas" aria-labelledby="finanzas-title">
-      <div className="finanzas-header">
-        <span>Control financiero</span>
-        <h2 id="finanzas-title">Finanzas simples para tomar mejores decisiones</h2>
-        <p>
+      <div className="section-header finanzas-header">
+        <span className="section-kicker">Control financiero</span>
+        <h2 id="finanzas-title" className="section-title">Finanzas simples para tomar mejores decisiones</h2>
+        <p className="section-copy">
           Registra ingresos y gastos, revisa tu utilidad, calcula precios y sigue metas de ahorro
           para que tu negocio tenga numeros claros cada semana.
         </p>
@@ -153,6 +208,9 @@ export default function Finanzas() {
               </strong>
             </div>
 
+            {cargando ? (
+              <p className="finanzas-message">Cargando tus finanzas...</p>
+            ) : (
             <div className="finanzas-table" role="table" aria-label="Movimientos financieros">
               <div className="finanzas-row finanzas-row-head" role="row">
                 <span>Concepto</span>
@@ -174,10 +232,11 @@ export default function Finanzas() {
               {!movimientos.length && (
                 <div className="finanzas-empty" role="row">
                   <strong>Sin movimientos registrados</strong>
-                  <span>Los ingresos y gastos apareceran aqui cuando se carguen desde la base de datos.</span>
+                  <span>Aquí aparecerán tus ingresos y gastos guardados por cuenta.</span>
                 </div>
               )}
             </div>
+            )}
           </article>
         </div>
 
@@ -220,6 +279,7 @@ export default function Finanzas() {
               <button type="submit">Agregar movimiento</button>
             </form>
             {mensaje && <p className="finanzas-message">{mensaje}</p>}
+            {guardando && <p className="finanzas-message">Guardando cambios...</p>}
           </article>
 
           <article className="finanzas-panel">
@@ -278,6 +338,7 @@ export default function Finanzas() {
                     type="number"
                     value={meta.objetivo}
                     onChange={(e) => actualizarMeta(index, 'objetivo', e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 </label>
                 <label>
@@ -288,6 +349,7 @@ export default function Finanzas() {
                     type="number"
                     value={meta.actual}
                     onChange={(e) => actualizarMeta(index, 'actual', e.target.value)}
+                    onFocus={(e) => e.target.select()}
                   />
                 </label>
               </div>
@@ -299,6 +361,24 @@ export default function Finanzas() {
               <p>
                 {formatoMoneda.format(meta.actual)} de {formatoMoneda.format(meta.objetivo)}
               </p>
+              <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => guardarMetas(metas)}
+                  disabled={guardando}
+                  className="btn-guardar-meta"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar meta'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => guardarMetas(metas)}
+                  disabled={guardando}
+                  className="btn-guardar-meta"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar ahorrado'}
+                </button>
+              </div>
             </article>
           );
         })}

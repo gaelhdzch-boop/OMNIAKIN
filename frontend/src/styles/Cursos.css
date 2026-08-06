@@ -1,19 +1,35 @@
 .cursos-page { background: transparent }
 .curso-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:1rem }
-.curso-card { background:#fff; padding:1rem; border-radius:16px; box-shadow:0 6px 18px rgba(0,0,0,0.06) }
+.curso-item { display:flex; flex-direction:column; gap:0.75rem }
+.curso-card { background:#fff; padding:1rem; border-radius:16px; box-shadow:0 6px 18px rgba(0,0,0,0.06); cursor:pointer; transition:transform 0.2s ease, box-shadow 0.2s ease }
+.curso-card:hover { transform: translateY(-2px); box-shadow:0 10px 24px rgba(0,0,0,0.08) }
 .curso-card-active { border: 2px solid #f472b6; }
 .curso-card h3 { margin:0 0 0.25rem 0 }
 .curso-card-top { display:flex; justify-content:space-between; gap:0.5rem; margin-bottom:0.75rem }
-.curso-chip { display:inline-flex; padding:0.3rem 0.6rem; border-radius:999px; background:#fdf2f8; color:#be185d; font-size:0.8rem; font-weight:700 }
-.curso-badge { color:#831843; font-size:0.8rem; font-weight:700 }
+.curso-chip,
+.curso-badge,
+.curso-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.curso-chip { background: #fdf2f8; color: #be185d; }
+.curso-badge { background: #f5e1ed; color: #831843; }
+.curso-meta span { background: #fff0f7; color: #831843; margin-right: 0.5rem; }
+
 .curso-description { color:#555; min-height:48px }
 .curso-progress { margin:0.75rem 0 }
 .curso-progress-bar { height:8px; background:#f3e8f2; border-radius:999px; overflow:hidden }
 .curso-progress-bar span { display:block; height:100%; background:#f472b6; border-radius:999px }
 .curso-actions { display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.75rem }
 .secondary-actions { margin-top:0.4rem }
-.curso-detail-card { display:grid; grid-template-columns: 1.1fr 0.9fr; gap:1rem; background:#fff; border-radius:18px; padding:1.2rem; margin-top:1rem; box-shadow:0 10px 24px rgba(0,0,0,0.06) }
-.curso-detail-list ul { padding-left:1.1rem; color:#555 }
+.curso-detail-card { display:grid; grid-template-columns: 1fr; gap:1rem; background:#fff; border-radius:18px; padding:1.2rem; margin-top:1rem; box-shadow:0 10px 24px rgba(0,0,0,0.06) }
+.curso-detail-list ul { padding-left:1.1rem; color:#555; margin:0 }
+.curso-detail-list li { margin-bottom:0.5rem }
 .curso-meta { display:flex; flex-wrap:wrap; gap:0.7rem; color:#831843; font-weight:700; margin-top:0.75rem }
 .curso-alert { border-radius:10px; padding:0.75rem 1rem; margin-bottom:0.85rem }
 .curso-alert.success { background:#ecfdf5; color:#166534 }
